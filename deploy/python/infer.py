@@ -126,7 +126,7 @@ class Detector(object):
             results['masks'] = np_masks
         return results
 
-    def predict(self, image_list, threshold=0.5, repeats=1, add_timer=True):
+    def predict(self, image_list, threshold=0.5, repeats=2, add_timer=True):
         '''
         Args:
             image_list (list): list of image
@@ -323,7 +323,7 @@ class DetectorPicoDet(Detector):
         self.det_times = Timer()
         self.cpu_mem, self.gpu_mem, self.gpu_util = 0, 0, 0
 
-    def predict(self, image, threshold=0.5, repeats=1, add_timer=True):
+    def predict(self, image, threshold=0.5, repeats=1000, add_timer=True):
         '''
         Args:
             image (str/np.ndarray): path of image/ np.ndarray read by cv2
@@ -521,6 +521,7 @@ def load_predictor(model_dir,
                 # cache 10 different shapes for mkldnn to avoid memory leak
                 config.set_mkldnn_cache_capacity(10)
                 config.enable_mkldnn()
+                config.enable_mkldnn_bfloat16()
             except Exception as e:
                 print(
                     "The current environment does not support `mkldnn`, so disable mkldnn."
@@ -556,10 +557,12 @@ def load_predictor(model_dir,
             print('trt set dynamic shape done!')
 
     # disable print log when predict
-    config.disable_glog_info()
+    #config.disable_glog_info()
     # enable shared memory
     config.enable_memory_optim()
     # disable feed, fetch OP, needed by zero_copy_run
+    config.switch_ir_debug()
+    config.enable_profile()
     config.switch_use_feed_fetch_ops(False)
     predictor = create_predictor(config)
     return predictor, config
